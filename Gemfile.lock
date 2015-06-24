@@ -9,6 +9,7 @@ GEM
     curb (0.8.8)
     domain_name (0.5.24)
       unf (>= 0.0.5, < 1.0.0)
+    hashie (3.4.1)
     http-cookie (1.0.2)
       domain_name (~> 0.5)
     iconv (1.0.4)
@@ -36,5 +37,6 @@ PLATFORMS
 
 DEPENDENCIES
   crawler_rocks
+  hashie
   iconv
   pry
