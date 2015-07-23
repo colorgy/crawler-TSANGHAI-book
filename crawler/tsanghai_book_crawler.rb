@@ -3,14 +3,18 @@ require 'pry'
 require 'json'
 require 'hashie'
 
+require 'book_toolkit'
+
 require 'thread'
 require 'thwait'
 
 class TsanghaiBookCrawler
-  def initialize
+  def initialize update_progress: nil, after_each: nil
+    @update_progress_proc = update_progress
+    @after_each_proc = after_each
+
     @search_url = "https://www.tsanghai.com.tw/model/pagesAjax.php"
     @search_result = "https://www.tsanghai.com.tw/search_result.php"
-
   end
 
   def books
@@ -36,18 +40,29 @@ class TsanghaiBookCrawler
         r = RestClient::Request.execute(url: @search_url, method: :post, verify_ssl: false, payload: payload(i))
         data = parse_json(r.match(json_match_regex).to_s)
 
+        isbn = nil; invalid_isbn = nil
+        begin
+          isbn = BookToolkit.to_isbn13(book.ISBN)
+        rescue Exception => e
+          invalid_isbn = book.ISBN
+        end
+
         data.json.each do |book|
           @books[book.NumberID] = {
             name: book.Name,
-            price: book.Pricing.to_i,
+            original_price: book.Pricing.to_i,
             author: book.Author,
             edition: book.Revision.to_i,
             external_image_url: URI.join(@search_result, book.path+book.SImg).to_s,
             publisher: book.Publishers,
-            isbn: book.ISBN,
+            isbn: isbn,
+            invalid_isbn: invalid_isbn,
             internal_code: book.NumberID,
-            url: "https://www.tsanghai.com.tw/book_detail.php?c=#{book.cID}&no=#{book.ID}#p=#{book.p}"
+            url: "https://www.tsanghai.com.tw/book_detail.php?c=#{book.cID}&no=#{book.ID}#p=#{book.p}",
+            known_supplier: 'tsanghai'
           }
+
+          @after_each_proc.call(book: @books[book.NumberID]) if @after_each_proc
         end
       end
     end
@@ -83,5 +98,5 @@ class TsanghaiBookCrawler
   end
 end
 
-cc = TsanghaiBookCrawler.new
-File.write('tsanghai_books.json', JSON.pretty_generate(cc.books))
+# cc = TsanghaiBookCrawler.new
+# File.write('tsanghai_books.json', JSON.pretty_generate(cc.books))
