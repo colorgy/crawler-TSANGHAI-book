@@ -40,14 +40,14 @@ class TsanghaiBookCrawler
         r = RestClient::Request.execute(url: @search_url, method: :post, verify_ssl: false, payload: payload(i))
         data = parse_json(r.match(json_match_regex).to_s)
 
-        isbn = nil; invalid_isbn = nil
-        begin
-          isbn = BookToolkit.to_isbn13(book.ISBN)
-        rescue Exception => e
-          invalid_isbn = book.ISBN
-        end
-
         data.json.each do |book|
+          isbn = nil; invalid_isbn = nil
+          begin
+            isbn = BookToolkit.to_isbn13(book.ISBN)
+          rescue Exception => e
+            invalid_isbn = book.ISBN
+          end
+
           @books[book.NumberID] = {
             name: book.Name,
             original_price: book.Pricing.to_i,
@@ -64,7 +64,7 @@ class TsanghaiBookCrawler
 
           @after_each_proc.call(book: @books[book.NumberID]) if @after_each_proc
         end
-      end
+      end # end each Thread
     end
 
     ThreadsWait.all_waits(*@threads)
